@@ -27,7 +27,7 @@ class CollegeTreeListCtrl(wx.gizmos.TreeListCtrl):
             {u'名称': u'三只乌鸦', u'标识': u'CDL3BLACKCROWS', '函数': u'已定义'},
             {u'名称': u'十字星', u'标识': u'CDLDOJISTAR', '函数': u'已定义'},
             {u'名称': u'锤头', u'标识': u'CDLHAMMER', '函数': u'已定义'},
-            {u'名称': u'射击之星', u'标识': u'SHOOTINGSTAR', '函数': u'已定义'}
+            {u'名称': u'射击之星', u'标识': u'CDLSHOOTINGSTAR', '函数': u'已定义'}
         ]
     }
 

@@ -5,11 +5,10 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import mpl_finance as mpf #替换 import matplotlib.finance as mpf
 import matplotlib.gridspec as gridspec#分割子图
-import sys
 
 from MultiGraphs.BaseGraphs import DefTypesPool, MplTypesDraw
+
 
 class BacktsGraphIf(MplTypesDraw):
 
@@ -17,6 +16,7 @@ class BacktsGraphIf(MplTypesDraw):
 
     def __init__(self, **kwargs):
         MplTypesDraw.__init__(self)
+
         self.fig = plt.figure(figsize=kwargs['figsize'], dpi=100, facecolor="white")#创建fig对象
         self.graph_dict = {}
         self.graph_curr = []
@@ -66,6 +66,7 @@ class BacktsGraphIf(MplTypesDraw):
                     posit_num = int(posit_num / 100) * 100  # 买入股票最少100股，对posit_num向下取整百
                 else: # 定额买入
                     posit_num = int(stake_size)
+
                 buy_cash = posit_num * (buy_price)  # 计算买入股票所需现金
                 # 计算手续费，不足5元按5元收，并保留2位小数
                 commission = round(max(buy_cash * c_rate, 5), 2)
@@ -77,6 +78,7 @@ class BacktsGraphIf(MplTypesDraw):
                           format(kl_index.strftime("%y-%m-%d"), np.round(buy_price, 2), posit_num, commission))
                 else:
                     print("当前时间:{0}; 您当前的资金不足以买入{1}股".format(kl_index.strftime("%y-%m-%d"), posit_num))
+
 
             elif today.Signal == -1 and skip_days == True:  # 卖出 避免未买先卖
                 skip_days = False
@@ -112,8 +114,15 @@ class BacktsGraphIf(MplTypesDraw):
             # 计算资金曲线在滚动最高值之后所回撤的百分比
             stock_dat['per_total'] = stock_dat['total'] / stock_dat['max_total']
 
-        print(f'亏损次数:{loss_count}, 盈利次数:{win_count}, 胜率:{round(win_count / (win_count + loss_count)*100, 2)}%')
-        print(f'平均亏损:{round((loss_profit / loss_count), 2)}% 平均盈利:{round((win_profit / win_count), 2)}%')
+        if loss_count == 0:
+            print(f'亏损次数:{loss_count}, 盈利次数:{win_count}, 胜率:{round(win_count / (win_count + loss_count) * 100, 2)}%')
+            print(f'平均亏损:{0}% 平均盈利:{round((win_profit / win_count), 2)}%')
+        elif win_count == 0:
+            print(f'亏损次数:{loss_count}, 盈利次数:{win_count}, 胜率:{round(win_count / (win_count + loss_count)*100, 2)}%')
+            print(f'平均亏损:{round((loss_profit / loss_count), 2)}% 平均盈利:{0}%')
+        else:
+            print(f'亏损次数:{loss_count}, 盈利次数:{win_count}, 胜率:{round(win_count / (win_count + loss_count)*100, 2)}%')
+            print(f'平均亏损:{round((loss_profit / loss_count), 2)}% 平均盈利:{round((win_profit / win_count), 2)}%')
 
         min_point_df = stock_dat.sort_values(by=['per_total'])[0:1]
         min_point_total = min_point_df.per_total

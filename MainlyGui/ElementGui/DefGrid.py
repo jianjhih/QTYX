@@ -60,26 +60,29 @@ class GridTable(wx.grid.Grid):
         else:
             # dataframe 类型
             df_data = data
-            try:
-                if df_data.empty != True:
+            #try:
+            if df_data.empty != True:
 
-                    self.ClearGrid()
-                    self.list_columns = df_data.columns.tolist()
+                self.ClearGrid()
+                self.list_columns = df_data.columns.tolist()
 
-                    self.AutoRowNums(self.GetNumberRows(), df_data.shape[0])
-                    self.AutoColNums(self.GetNumberCols(), df_data.shape[1])
+                self.AutoRowNums(self.GetNumberRows(), df_data.shape[0])
+                self.AutoColNums(self.GetNumberCols(), df_data.shape[1])
 
-                    for col, series in df_data.iteritems():
+                for col, series in df_data.iteritems():
 
-                        m = self.list_columns.index(col)
+                    m = self.list_columns.index(col)
+                    if col in tran_col:
                         self.SetColLabelValue(m, tran_col.get(col, ""))
+                    else:
+                        self.SetColLabelValue(m, col)
 
-                        for n, val in enumerate(series):
-                            self.SetCellValue(n, m, str(val))
+                    for n, val in enumerate(series):
+                        self.SetCellValue(n, m, str(val))
 
-                        self.AutoSizeColumn(m, True)  # 自动调整列尺寸
-            except:
-                print("set df grid table error")
+                    self.AutoSizeColumn(m, True)  # 自动调整列尺寸
+            #except:
+                #print("set df grid table error")
 
 
 

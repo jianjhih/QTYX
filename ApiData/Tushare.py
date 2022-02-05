@@ -11,6 +11,15 @@ from CommIf.SysFile import Base_File_Oper
 
 pro = ts.pro_api(Base_File_Oper.read_tushare_token())  # 初始化pro接口
 
+def basic_code_list(fields_cont = ['ts_code', 'symbol', 'name']):
+    # 查询当前所有正常上市交易的股票列表
+    try:
+        data = pro.stock_basic(exchange='', list_status='L', fields='ts_code,symbol,name,area,industry,list_date')
+        Base_File_Oper.save_tushare_basic(data)
+    except:
+        data = Base_File_Oper.load_tushare_basic()
+
+    return data.loc[:, fields_cont]
 
 # 使用Python3自带的sqlite数据库
 class DataBase_Sqlite(object):
@@ -75,21 +84,44 @@ class Tspro_Backend():
         self.filter = [u"换手率%", u"量比", u"市盈率(总市值/净利润)", u"市盈率TTM",
                   u"市净率(总市值/净资产)", u"市销率", u"市销率TTM", u"股息率%",
                   u"股息率TTM%", u"总股本(万股)", u"流通股本(万股)", u"自由流通股本(万股)",
-                  u"总市值(万元)", u"流通市值(万元)"]
+                  u"总市值(万元)", u"流通市值(万元)", u"所在地域", u"上市日期", u"所属行业"]
+
 
     def datafame_join(self, date_val):
 
-        df_stbasic = pro.stock_basic(exchange='', list_status='L',
-                                     fields='ts_code,name,area,industry,list_date')
-        df_dybasic = pro.daily_basic(trade_date=date_val)  # "20200614"
-        # cols_to_use = df_dybasic.columns.difference(df_stbasic.columns) # pandas版本0.15及之上 找出两个表不同列，然后merge
+        # 使用tushare pro的stock_basic和daily_basic
+        try:
+            df_stbasic = basic_code_list(['ts_code','name','area','industry','list_date'])
+        except:
+            print("请检查tushare接口-[stock_basic]是否正常！")
+            df_stbasic = pd.DataFrame()
 
-        if df_dybasic.empty == True:
-            df_join = pd.DataFrame()
-        else:
+        try:
+            df_dybasic = pro.daily_basic(trade_date=date_val)  # "20200614"
+            # cols_to_use = df_dybasic.columns.difference(df_stbasic.columns) # pandas版本0.15及之上 找出两个表不同列，然后merge
+        except:
+            print("请检查tushare接口-[daily_basic]是否正常！")
+            df_dybasic = pd.DataFrame()
+
+        if (df_stbasic.empty != True) and (df_dybasic.empty != True): # 两个接口都正常是合并
+
             df_join = pd.merge(df_stbasic, df_dybasic, on='ts_code', left_index=False, right_index=False,
                          how='outer')
             df_join.drop(['trade_date', 'turnover_rate'], axis=1, inplace=True)
+
+        elif df_stbasic.empty != True: # 仅返回正常的接口
+
+            df_join = df_stbasic
+
+        elif df_dybasic.empty != True: # 仅返回正常的接口
+
+            df_join = df_dybasic
+
+        else:
+            df_join = pd.DataFrame()
+
+        df_join.rename(columns=dict(zip(df_join.columns.tolist(), map(self.tran_col.get, df_join.columns.tolist()))),
+                  inplace=True)
 
         return df_join
 
@@ -158,4 +190,7 @@ class Tsorg_Backend():
             df_join = pd.DataFrame()
 
         return df_join
+
+
+
 

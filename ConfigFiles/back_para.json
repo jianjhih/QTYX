@@ -56,7 +56,7 @@
             "xlabel": "日期",
             "xticks": 15,
             "legend": "best",
-            "xticklabels": "%Y-%m-%d"
+            "xticklabels": "%Y-%m-%d %H:%M"
         }
     }
 }

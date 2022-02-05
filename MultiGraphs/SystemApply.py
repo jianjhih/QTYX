@@ -2,12 +2,14 @@
 #-*- encoding: utf-8 -*-
 #author 元宵大师 本例程仅用于教学目的，严禁转发和用于盈利目的，违者必究
 
-import sys
+import sys, os
 from MultiGraphs.MarketGraph import MarketGraphIf
 from MultiGraphs.BacktsGraph import BacktsGraphIf
 
 
 class Sys_MultiGraph(MarketGraphIf, BacktsGraphIf):
+
+    rel_path = os.path.dirname(os.path.dirname(__file__)) + '/ConfigFiles/'
 
     # 通读<8.1 定制可视化接口> -- 代码具体出现于<9.1.6 回测界面的自定义设计>
     def back_graph_run(self, stock_data, **kwargs):
@@ -15,7 +17,7 @@ class Sys_MultiGraph(MarketGraphIf, BacktsGraphIf):
         self.df_ohlc = stock_data
 
         # 临时把标准输出重定向到一个文件，然后再恢复正常
-        with open('./ConfigFiles/logtrade.txt', 'w') as f:
+        with open(Sys_MultiGraph.rel_path + 'logtrade.txt', 'w', encoding='gbk') as f:
             oldstdout = sys.stdout
             sys.stdout = f
             try:

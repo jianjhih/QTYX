@@ -15,24 +15,30 @@ import matplotlib.gridspec as gridspec # 分割子图
 
 import tushare as ts
 import pandas as pd
-import mpl_finance as mpf
+import mplfinance as mpf  # 替换 import mpl_finance as mpf
 import matplotlib.pyplot as plt
 import datetime
 import wx.gizmos
 
 from MultiGraphs.SystemApply import Sys_MultiGraph
+from CommIf.SysFile import Base_File_Oper
 
 plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
 plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
 
-class StockPanel(wx.Panel):
+class BasePanel(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=-1)
 
+        sys_para = Base_File_Oper.load_sys_para("sys_para.json")
+
         # 分割子图实现代码
-        self.figure = Figure(figsize=(8, 4))
+        self.figure = Figure(figsize=(sys_para["multi-panels"]["mpl_fig_x"],
+                                      sys_para["multi-panels"]["mpl_fig_y"])) # 调整尺寸-figsize(x,y)
+
         gs = gridspec.GridSpec(2, 1, left=0.1, bottom=0.15, right=0.95, top=0.90, wspace=None, hspace=0.1,
                                height_ratios=[3.5, 1])
+
         self.ochl = self.figure.add_subplot(gs[0, :])
         self.vol = self.figure.add_subplot(gs[1, :])
 
@@ -41,6 +47,19 @@ class StockPanel(wx.Panel):
         self.TopBoxSizer.Add(self.FigureCanvas, proportion=10, border=2, flag=wx.ALL | wx.EXPAND)
 
         self.SetSizer(self.TopBoxSizer)
+
+
+class StockPanel(wx.Panel):
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent=parent, id=-1)
+
+        self.disp_panel = BasePanel(self)  # 自定义
+        self.figure = self.disp_panel.figure
+        self.ochl = self.disp_panel.ochl
+        self.vol = self.disp_panel.vol
+
+        self.FigureCanvas = self.disp_panel.FigureCanvas
+
 
     def clear_subgraph(self):
         # 再次画图前,必须调用该命令清空原来的图形
@@ -55,8 +74,30 @@ class StockPanel(wx.Panel):
         num_bars = np.arange(0, len(stockdat.index))
 
         # 绘制K线
+        # 原mpl_finance方法
+        """
         ohlc = list(zip(num_bars, stockdat.Open, stockdat.Close, stockdat.High, stockdat.Low))
         mpf.candlestick_ochl(self.ochl, ohlc, width=0.5, colorup='r', colordown='g')  # 绘制K线走势
+        """
+        # 现mplfinance方法
+        """
+        make_marketcolors() 设置k线颜色
+        :up 设置阳线柱填充颜色
+        :down 设置阴线柱填充颜色
+        ：edge 设置蜡烛线边缘颜色 'i' 代表继承k线的颜色
+        ：wick 设置蜡烛上下影线的颜色
+        ：volume 设置成交量颜色
+        ：inherit 是否继承, 如果设置了继承inherit=True，那么edge即便设了颜色也会无效
+        """
+        def_color = mpf.make_marketcolors(up='red', down='green', edge='black', wick='black')
+        """
+        make_mpf_style() 设置mpf样式
+        ：gridaxis:设置网格线位置,both双向
+        ：gridstyle:设置网格线线型
+        ：y_on_right:设置y轴位置是否在右
+        """
+        def_style = mpf.make_mpf_style(marketcolors=def_color, gridaxis='both', gridstyle='-.', y_on_right=False)
+        mpf.plot(pd.DataFrame(stockdat), type='candle', style=def_style,  ax=self.ochl)
 
         # 绘制成交量
         self.vol.bar(num_bars, stockdat.Volume, color=['g' if stockdat.Open[x] > stockdat.Close[x] else 'r' for x in
@@ -73,7 +114,7 @@ class StockPanel(wx.Panel):
         self.ochl.set_xticks(range(0, major_tick, 15))  # 每五天标一个日期
         self.vol.set_xticks(range(0, major_tick, 15))  # 每五天标一个日期
         self.vol.set_xticklabels(
-            [stockdat.index.strftime('%Y%m%d')[index] for index in self.vol.get_xticks()])  # 标签设置为日期
+            [stockdat.index.strftime('%Y-%m-%d %H:%M')[index] for index in self.vol.get_xticks()])  # 标签设置为日期
 
         for label in self.ochl.xaxis.get_ticklabels():  # X-轴每个ticker标签隐藏
             label.set_visible(False)
@@ -83,8 +124,6 @@ class StockPanel(wx.Panel):
 
         self.ochl.grid(True, color='k')
         self.vol.grid(True, color='k')
-
-
 
 class SubGraphs(wx.Panel):
     def __init__(self, parent):
@@ -122,6 +161,7 @@ class GroupPanel(wx.Panel):
 
         self.SetSizer(self.TopBoxSizer)
 
+
 class Sys_Panel(Sys_MultiGraph, wx.Panel):
     def __init__(self, parent, **kwargs):
         wx.Panel.__init__(self, parent=parent, id=-1)
@@ -129,7 +169,7 @@ class Sys_Panel(Sys_MultiGraph, wx.Panel):
 
         self.FigureCanvas = FigureCanvas(self, -1, self.fig) # figure加到FigureCanvas
         self.TopBoxSizer = wx.BoxSizer(wx.VERTICAL)
-        self.TopBoxSizer.Add(self.FigureCanvas,proportion = -1, border = 2,flag = wx.ALL | wx.EXPAND)
+        self.TopBoxSizer.Add(self.FigureCanvas, proportion = -1, border = 2,flag = wx.ALL | wx.EXPAND)
         self.SetSizer(self.TopBoxSizer)
 
     def update_subgraph(self):

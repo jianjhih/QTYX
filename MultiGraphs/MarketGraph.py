@@ -103,7 +103,7 @@ class MarketGraphIf(MplTypesDraw):
                             'andata': down_cross,
                             'va': 'top',
                             'xy_y': 'short_list',
-                            'xytext': (0, +stock_dat["Close"].mean()),
+                            'xytext': (0, +20), # 提示位置偏移
                             'fontsize': 8,
                             'arrow': dict(facecolor='green', shrink=0.1)
                          },
@@ -112,7 +112,7 @@ class MarketGraphIf(MplTypesDraw):
                              'andata': up_cross,
                              'va': 'bottom',
                              'xy_y': 'long_list',
-                             'xytext': (0, -stock_dat["Close"].mean()),
+                             'xytext': (0, -20), # 提示位置偏移
                              'fontsize': 8,
                              'arrow': dict(facecolor='red', shrink=0.1)
                          }
@@ -161,7 +161,7 @@ class MarketGraphIf(MplTypesDraw):
                             'andata': up_jump,
                              'va': 'top',
                              'xy_y': 'preHigh',
-                             'xytext': (0, -stock_dat['Close'].mean() * 0.5),
+                             'xytext': (0, -20), # 提示位置偏移
                              'fontsize': 8,
                              'arrow': dict(facecolor='red', shrink=0.1)
                          },
@@ -170,7 +170,7 @@ class MarketGraphIf(MplTypesDraw):
                              'andata': down_jump,
                              'va': 'bottom',
                              'xy_y': 'preLow',
-                             'xytext': (0, stock_dat['Close'].mean() * 0.5),
+                             'xytext': (0, 20), # 提示位置偏移
                              'fontsize': 8,
                              'arrow': dict(facecolor='green', shrink=0.1)
                          }
@@ -264,7 +264,7 @@ class MarketGraphIf(MplTypesDraw):
                               {'andata': pattern,
                                'va': 'bottom',
                                'xy_y': 'High',
-                               'xytext': (0, stock_dat['Close'].mean()),
+                               'xytext': (0, 20), # 提示位置偏移
                                'fontsize': 8,
                                'arrow': dict(arrowstyle='->', facecolor='blue',
                                              connectionstyle="arc3,rad=.2")
@@ -283,11 +283,11 @@ class MarketGraphIf(MplTypesDraw):
 
         pattern = stock_dat[(CDL3BLACKCROWS == 100) | (CDL3BLACKCROWS == -100)]
 
-        type_dict = {u'CDLDARKCLOUDCOVER':
+        type_dict = {u'CDL3BLACKCROWS':
                               {'andata': pattern,
                                'va': 'bottom',
                                'xy_y': 'High',
-                               'xytext': (0, stock_dat['Close'].mean()),
+                               'xytext': (0, 20), # 提示位置偏移
                                'fontsize': 8,
                                'arrow': dict(arrowstyle='->', facecolor='blue',
                                              connectionstyle="arc3,rad=.2")
@@ -297,28 +297,6 @@ class MarketGraphIf(MplTypesDraw):
         view_function = MplTypesDraw.mpl.route_output(u"annotate")
         view_function(stock_dat.index, type_dict, sub_graph)
 
-    # 参考<8.4.2 常见 K 线形态的识别方法>
-    @app.route_types(u"CDL3BLACKCROWS")
-    def balck3_crows_graph(stock_dat, sub_graph, df_dat=None):  # prepare data
-        # 绘制 talib K线形态 三只乌鸦
-        CDL3BLACKCROWS = talib.CDL3BLACKCROWS(stock_dat.Open.values, stock_dat.High.values, stock_dat.Low.values,
-                                                    stock_dat.Close.values)
-
-        pattern = stock_dat[(CDL3BLACKCROWS == 100) | (CDL3BLACKCROWS == -100)]
-
-        type_dict = {u'3BLACKCROWS':
-                              {'andata': pattern,
-                               'va': 'bottom',
-                               'xy_y': 'High',
-                               'xytext': (0, stock_dat['Close'].mean()),
-                               'fontsize': 8,
-                               'arrow': dict(arrowstyle='->', facecolor='blue',
-                                             connectionstyle="arc3,rad=.2")
-                               }
-                    }
-
-        view_function = MplTypesDraw.mpl.route_output(u"annotate")
-        view_function(stock_dat.index, type_dict, sub_graph)
 
     # 参考<8.4.2 常见 K 线形态的识别方法>
     @app.route_types(u"CDLDOJISTAR")
@@ -329,11 +307,11 @@ class MarketGraphIf(MplTypesDraw):
 
         pattern = stock_dat[(CDLDOJISTAR == 100) | (CDLDOJISTAR == -100)]
 
-        type_dict = {u'DOJISTAR':
+        type_dict = {u'CDLDOJISTAR':
                               {'andata': pattern,
                                'va': 'bottom',
                                'xy_y': 'High',
-                               'xytext': (0, stock_dat['Close'].mean()),
+                               'xytext': (0, 20), # 提示位置偏移
                                'fontsize': 8,
                                'arrow': dict(arrowstyle='->', facecolor='blue',
                                              connectionstyle="arc3,rad=.2")
@@ -352,11 +330,11 @@ class MarketGraphIf(MplTypesDraw):
 
         pattern = stock_dat[(CDLHAMMER == 100) | (CDLHAMMER == -100)]
 
-        type_dict = {u'HAMMER':
+        type_dict = {u'CDLHAMMER':
                               {'andata': pattern,
                                'va': 'bottom',
                                'xy_y': 'High',
-                               'xytext': (0, stock_dat['Close'].mean()),
+                               'xytext': (0, 20), # 提示位置偏移
                                'fontsize': 8,
                                'arrow': dict(arrowstyle='->', facecolor='blue',
                                              connectionstyle="arc3,rad=.2")
@@ -369,17 +347,17 @@ class MarketGraphIf(MplTypesDraw):
     # 参考<8.4.2 常见 K 线形态的识别方法>
     @app.route_types(u"CDLSHOOTINGSTAR")
     def shooting_star_graph(stock_dat, sub_graph, df_dat=None):  # prepare data
-        # 绘制 talib K线形态 长蜡烛
+        # 绘制 talib K线形态 射击之星
         CDLSHOOTINGSTAR = talib.CDLSHOOTINGSTAR(stock_dat.Open.values, stock_dat.High.values, stock_dat.Low.values,
                                                     stock_dat.Close.values)
 
         pattern = stock_dat[(CDLSHOOTINGSTAR == 100) | (CDLSHOOTINGSTAR == -100)]
 
-        type_dict = {u'SHOOTINGSTAR':
+        type_dict = {u'CDLSHOOTINGSTAR':
                               {'andata': pattern,
                                'va': 'bottom',
                                'xy_y': 'High',
-                               'xytext': (0, stock_dat['Close'].mean()),
+                               'xytext': (0, 20), # 提示位置偏移
                                'fontsize': 8,
                                'arrow': dict(arrowstyle='->', facecolor='blue',
                                              connectionstyle="arc3,rad=.2")

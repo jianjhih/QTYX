@@ -13,7 +13,7 @@ class Base_Strategy_Group():
         stock_dat['N1_High'] = stock_dat.High.rolling(window=N1).max()  # 计算最近N1个交易日最高价
         expan_max = stock_dat.High.expanding().max()  # 滚动计算当前交易日为止的最大值
         stock_dat['N1_High'].fillna(value=expan_max, inplace=True)  # 填充前N1个nan
-        # print(stock_dat.head())
+        #print(stock_dat.head())
         """
                     High   Low  Open  Close   Volume  N1_High
         Date                                                 
@@ -51,9 +51,13 @@ class Base_Strategy_Group():
         stock_dat.loc[sell_index, 'Signal'] = -1
 
         stock_dat['Signal'] = stock_dat.Signal.shift(1)
+        print(stock_dat.head(10))
         # print(stock_dat[stock_dat['signal'].notna()])
         stock_dat['Signal'].fillna(method='ffill', inplace=True)  # 与前面元素值保持一致
         stock_dat['Signal'].fillna(value=-1, inplace=True)  # 序列最前面几个NaN值用-1填充
+
+        print(stock_dat.head(10))
+
         return stock_dat
 
     # 参照<9.3.2 ATR止盈/止损策略的实现>
