@@ -214,7 +214,7 @@ class EventHandle:
         # 更新回测参数
         back_para['subplots_dict']['graph_sec']['graph_type']['cash_profit']['cash_hold'] = cash_value
         back_para['subplots_dict']['graph_sec']['graph_type']['cash_profit']['slippage'] = slippage_value
-        back_para['subplots_dict']['graph_sec']['graph_type']['cash_profit']['c_rate'] = commission_value
+        back_para['subplots_dict']['graph_sec']['graph_type']['cash_profit']['c_rate'] = commission_value机构
         back_para['subplots_dict']['graph_sec']['graph_type']['cash_profit']['t_rate'] = tax_value
         back_para['subplots_dict']['graph_sec']['graph_type']['cash_profit']['stake_size'] = stake_value
         back_para['subplots_dict']['graph_fst']['title'] = st_code + "-回测分析"

@@ -49,6 +49,10 @@ from ApiData.Tushare import (
     Tsorg_Backend
 )
 
+from ApiData.FromSql import (
+    ReadFundDatFromSql
+)
+
 from ApiData.CrawerDaily import CrawerDailyBackend
 from ApiData.CrawerNorth import CrawerNorthBackend
 
@@ -489,9 +493,9 @@ class UserFrame(wx.Frame):
         self.src_dat_cmbo = wx.ComboBox(sub_panel, -1,  choices=["tushare每日指标",
                                                                  "爬虫每日指标",
                                                                  "爬虫北向资金",
+                                                                 "基金季度持仓",
                                                                  "离线每日指标",
                                                                  "离线业绩预告",
-                                                                 "离线基金持仓",
                                                                  "离线财务报告"],
                                             style=wx.CB_READONLY | wx.CB_DROPDOWN)  # 选股项
         self.src_dat_sizer.Add(self.src_dat_cmbo, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=2)
@@ -792,6 +796,10 @@ class UserFrame(wx.Frame):
             self.ts_data = CrawerNorthBackend(self.syslog)
             self.df_join = self.ts_data.datafame_join(sdate_val.strftime('%Y%m%d'))  # 刷新self.df_join
 
+        elif self.src_dat_cmbo.GetStringSelection() == "基金季度持仓":
+
+            self.df_join = ReadFundDatFromSql(self.syslog)
+            print(self.df_join)
         else: # 离线csv文件
 
             # 第一步:收集导入文件路径
@@ -1172,8 +1180,25 @@ class UserFrame(wx.Frame):
             except:
                 MessageDialog("股票代码不在存储表中！检查是否为新股/退市等情况！")
 
+        elif col_label == "股票名称":
+            # 收集表格中的单元格
+            try:
+                st_name = self.grid_pk.GetCellValue(event.GetRow(), event.GetCol())
+                st_code = self.code_table.get_code(st_name)
+
+                text = self.call_method(self.event_task['get_cash_flow'], st_code=self.code_table.conv_code(st_code))
+
+                if MessageDialog(
+                        text + "\n添加股票[%s]到自选股票池？" % (self.code_table.conv_code(st_code) + "|" + st_name)) == "点击Yes":
+                    # self._add_analyse_list(self.code_table.conv_code(st_code) + "|" + st_name)
+                    # 自选股票池 更新股票
+                    self.code_pool.update_increase_st({st_name: self.code_table.conv_code(st_code)})
+                    self.grid_pl.SetTable(self.code_pool.load_self_pool(), ["自选股", "代码"])
+            except:
+                MessageDialog("股票名称不在存储表中！检查是否为新股/退市等情况！")
+
         else:
-            MessageDialog("请点击股票代码！")
+            MessageDialog("请点击股票代码或股票名称！")
 
     def _ev_import_dat(self, event): # 点击导入股票数据
 
