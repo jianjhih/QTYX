@@ -20,6 +20,7 @@ def bs_k_data_stock(code_val='sz.000651', start_val='2009-01-01', end_val='2019-
         # 行业指数 无分钟线
         df_bs = bs.query_history_k_data_plus(code_val, fields, start_date=start_val, end_date=end_val,
                                              frequency=freq_val)
+
     else:
         # 个股指数
         if (freq_val != 'd') and (freq_val != 'w') and (freq_val != 'm'):
@@ -64,7 +65,6 @@ def bs_k_data_stock(code_val='sz.000651', start_val='2009-01-01', end_val='2019-
                       'Volume': result.volume}
     result.index = result.index.set_names('Date')
     df_recon = pd.DataFrame(recon_data)
-
     # 登出系统
     bs.logout()
     return df_recon
