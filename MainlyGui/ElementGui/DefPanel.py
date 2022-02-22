@@ -53,13 +53,23 @@ class StockPanel(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=-1)
 
-        self.disp_panel = BasePanel(self)  # 自定义
-        self.figure = self.disp_panel.figure
-        self.ochl = self.disp_panel.ochl
-        self.vol = self.disp_panel.vol
+        sys_para = Base_File_Oper.load_sys_para("sys_para.json")
 
-        self.FigureCanvas = self.disp_panel.FigureCanvas
+        # 分割子图实现代码
+        self.figure = Figure(figsize=(sys_para["multi-panels"]["mpl_fig_x"],
+                                      sys_para["multi-panels"]["mpl_fig_y"])) # 调整尺寸-figsize(x,y)
 
+        gs = gridspec.GridSpec(2, 1, left=0.1, bottom=0.15, right=0.95, top=0.90, wspace=None, hspace=0.1,
+                               height_ratios=[3.5, 1])
+
+        self.ochl = self.figure.add_subplot(gs[0, :])
+        self.vol = self.figure.add_subplot(gs[1, :])
+
+        self.FigureCanvas = FigureCanvas(self, -1, self.figure)  # figure加到FigureCanvas
+        self.TopBoxSizer = wx.BoxSizer(wx.VERTICAL)
+        self.TopBoxSizer.Add(self.FigureCanvas, proportion=10, border=2, flag=wx.ALL | wx.EXPAND)
+
+        self.SetSizer(self.TopBoxSizer)
 
     def clear_subgraph(self):
         # 再次画图前,必须调用该命令清空原来的图形

@@ -29,7 +29,7 @@ class AnimationDialog(wx.Dialog):
 
     def __init__(self, parent, title=u"表格数据显示", update_df=[]):
         wx.Dialog.__init__(self, parent, -1, title, size=(850, 800),
-                           style=wx.CAPTION | wx.CLOSE_BOX | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX)
+                           style=wx.DEFAULT_FRAME_STYLE)
 
         self.SetBackgroundColour(wx.Colour('#EBEDEB'))
 
