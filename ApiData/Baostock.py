@@ -112,5 +112,6 @@ def bs_cash_flow_stock(code_val='sh.600000', year_val=2020, quarter_val=2):
                                     },  inplace=True)
 
     # 登出系统
-    bs.logout()
+    bs.logout(df_cash_flow)
     return df_cash_flow
+

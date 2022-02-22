@@ -23,7 +23,7 @@ def ReadFundDatFromSql(syslog):
     # 创建数据库存储路径
     store_path = os.path.dirname(os.path.dirname(__file__)) + \
         "/DataFiles/FundData/"
-    print(store_path)
+
     quarters = {"1":"3/31", "2":"6/30", "3":"9/30", "4":"12/31"}
 
     conn = sqlite3.connect(store_path+'fund_data_quarter.db') # 如果db不存在会自动创建
@@ -32,7 +32,7 @@ def ReadFundDatFromSql(syslog):
 
     cur_month = datetime.now().month
     cur_year = datetime.now().year
-    cur_quarter = int((cur_month - 1) / 3) + 1
+    cur_quarter = (cur_month - 1) // 3 + 1
 
     if cur_quarter == 1:
         pre_fst_year = cur_year - 1

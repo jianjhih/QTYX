@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 import datetime
 import time
 import webbrowser
-
 from importlib import reload
 
 from MainlyGui.ElementGui.DefPanel import (
@@ -79,16 +78,22 @@ plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
 
 class UserFrame(wx.Frame):
 
-    def __init__(self, parent=None, id=-1, Fun_SwFrame=None):
+    def __init__(self, parent=None, id=-1, displaySize=(1600, 900), Fun_SwFrame=None):
 
-        # hack to help on dual-screen, need something better XXX - idfah
-        displaySize = wx.DisplaySize()  # (1920, 1080)
-        displaySize = 0.85 * displaySize[0], 0.75 * displaySize[1]
+        # M1 与 M2 横向布局时宽度分割
+        self.M1_width = int(displaySize[0] * 0.1)
+        self.M2_width = int(displaySize[0] * 0.9)
+        # M1 纵向100%
+        self.M1_length = int(displaySize[1])
 
-        # call base class constructor
+        # M1中S1 S2 S3 纵向布局高度分割
+        self.M1S1_length = int(self.M1_length * 0.2)
+        self.M1S2_length = int(self.M1_length * 0.2)
+        self.M1S3_length = int(self.M1_length * 0.6)
+
         # 默认样式wx.DEFAULT_FRAME_STYLE含
         # wx.MINIMIZE_BOX | wx.MAXIMIZE_BOX | wx.RESIZE_BORDER | wx.SYSTEM_MENU | wx.CAPTION | wx.CLOSE_BOX | wx.CLIP_CHILDREN
-        wx.Frame.__init__(self, parent=None, title=u'量化软件', size=displaySize, style=wx.DEFAULT_FRAME_STYLE)  # size=(1000,600)
+        wx.Frame.__init__(self, parent=None, title=u'量化软件', size=displaySize, style=wx.DEFAULT_FRAME_STYLE)
 
         # 用于量化工具集成到整体系统中
         self.fun_swframe = Fun_SwFrame
@@ -124,6 +129,21 @@ class UserFrame(wx.Frame):
         self.DispPanel = Sys_Panel(self, **firm_para['layout_dict']) # 自定义
         self.BackMplPanel = Sys_Panel(self, **back_para['layout_dict']) # 自定义
         self.DispPanelA = self.DispPanel
+
+        # 此处涉及windows和macos的区别
+        sys_para = Base_File_Oper.load_sys_para("sys_para.json")
+        if sys_para["operate_sys"] == "windows":
+            try:
+                # WIN环境下兼容WEB配置
+                import winreg
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                                     r"SOFTWARE\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_BROWSER_EMULATION",
+                                     0, winreg.KEY_ALL_ACCESS)  # 打开所有权限
+                # 设置注册表python.exe 值为 11000(IE11)
+                winreg.SetValueEx(key, 'python.exe', 0, winreg.REG_DWORD, 0x00002af8)
+            except:
+                # 设置出现错误
+                MessageDialog("WIN环境配置注册表中浏览器兼容显示出错,检查是否安装第三方库【winreg】")
 
         # 创建wxGrid表格对象
         self._init_grid_pk()
@@ -369,10 +389,6 @@ class UserFrame(wx.Frame):
                                     flag=wx.EXPAND | wx.ALL | wx.CENTER, border=2)
         self.group_analy_cmbo.Bind(wx.EVT_COMBOBOX, self._ev_group_analy)  # 绑定ComboBox事件
 
-        # 导入数据按钮
-        self.import_dat_but = wx.Button(sub_panel, -1, "导入数据")
-        self.import_dat_but.Bind(wx.EVT_BUTTON, self._ev_import_dat) # 绑定按钮事件
-
         stock_para_sizer.Add(self.start_date_sizer, proportion=0, flag=wx.EXPAND | wx.CENTER | wx.ALL, border=10)
         stock_para_sizer.Add(self.end_date_sizer, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=10)
         stock_para_sizer.Add(self.stock_code_sizer, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=10)
@@ -380,7 +396,6 @@ class UserFrame(wx.Frame):
         stock_para_sizer.Add(self.stock_authority_sizer, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=10)
         stock_para_sizer.Add(self.pick_graph_sizer, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=10)
         stock_para_sizer.Add(self.group_analy_sizer, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=10)
-        stock_para_sizer.Add(self.import_dat_but, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=10)
 
         return stock_para_sizer
 
@@ -473,18 +488,15 @@ class UserFrame(wx.Frame):
         self.pick_stock_sizer.Add(self.sort_values_cmbo, proportion=0,
                                   flag=wx.EXPAND | wx.ALL | wx.CENTER, border=2)
 
-        # 子参数——剔除ST/*ST
-        self.remove_st_box = wx.StaticBox(sub_panel, -1, u'是否剔除ST/*ST')
-        self.remove_st_sizer = wx.StaticBoxSizer(self.remove_st_box, wx.VERTICAL)
-        self.remove_st_chk = wx.CheckBox(sub_panel, label='剔除')
-        self.remove_st_sizer.Add(self.remove_st_chk, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=2)
+        # 子参数——剔除ST/*ST 及 标记自选股
+        self.adv_select_box = wx.StaticBox(sub_panel, -1, u'勾选确认')
+        self.adv_select_sizer = wx.StaticBoxSizer(self.adv_select_box, wx.HORIZONTAL)
+        self.mark_self_chk = wx.CheckBox(sub_panel, label='标记自选股')
+        self.mark_self_chk.Bind(wx.EVT_CHECKBOX, self._ev_mark_self)  # 绑定复选框事件
 
-        # 子参数——标记自选股
-        self.mark_self_box = wx.StaticBox(sub_panel, -1, u'是否标记自选股')
-        self.mark_self_box_sizer = wx.StaticBoxSizer(self.mark_self_box, wx.VERTICAL)
-        self.mark_self_box_chk = wx.CheckBox(sub_panel, label='标记')
-        self.mark_self_box_chk.Bind(wx.EVT_CHECKBOX, self._ev_mark_self)  # 绑定复选框事件
-        self.mark_self_box_sizer.Add(self.mark_self_box_chk, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=2)
+        self.remove_st_chk = wx.CheckBox(sub_panel, label='剔除ST/*ST')
+        self.adv_select_sizer.Add(self.mark_self_chk, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=2)
+        self.adv_select_sizer.Add(self.remove_st_chk, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=2)
 
         # 子参数——选股数据源选取
         self.src_dat_box = wx.StaticBox(sub_panel, -1, u'选股数据源选取')
@@ -506,35 +518,15 @@ class UserFrame(wx.Frame):
         """
         self.src_dat_cmbo.Bind(wx.EVT_RADIOBUTTON, self._ev_src_choose)
 
-        # 创建FlexGridSizer布局网格 vgap定义垂直方向上行间距/hgap定义水平方向上列间距
-        self.FlexGridSizer = wx.FlexGridSizer(rows=2, cols=2, vgap=3, hgap=3)
+        # 选股序列按钮——刷新数据 + 开始选股 + 保存结果
+        self.start_pick_but = wx.Button(sub_panel, -1, "选股过程")
+        self.start_pick_but.Bind(wx.EVT_BUTTON, self._ev_select_seq)  # 绑定按钮事件
 
-        # 刷新/复位数据按钮
-        self.start_reset_but = wx.Button(sub_panel, -1, "刷新数据")
-        self.start_reset_but.Bind(wx.EVT_BUTTON, self._ev_start_reset)  # 绑定按钮事件
-
-        # 选股按钮
-        self.start_pick_but = wx.Button(sub_panel, -1, "开始选股")
-        self.start_pick_but.Bind(wx.EVT_BUTTON, self._ev_start_select)  # 绑定按钮事件
-
-        # 保存按钮
-        self.start_save_but = wx.Button(sub_panel, -1, "保存结果")
-        self.start_save_but.Bind(wx.EVT_BUTTON, self._ev_start_save)  # 绑定按钮事件
-
-        # 加入Sizer中
-        self.FlexGridSizer.Add(self.start_reset_but, proportion=1, border=2,
-                               flag=wx.CENTER | wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
-        self.FlexGridSizer.Add(self.start_pick_but, proportion=1, border=2,
-                               flag=wx.CENTER | wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
-        self.FlexGridSizer.Add(self.start_save_but, proportion=1, border=2,
-                               flag=wx.CENTER | wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
-
-        pick_para_sizer.Add(self.cur_date_sizer, proportion=0, flag=wx.EXPAND | wx.CENTER | wx.ALL, border=10)
+        pick_para_sizer.Add(self.cur_date_sizer, proportion=0, flag=wx.EXPAND | wx.ALL| wx.CENTER, border=10)
         pick_para_sizer.Add(self.pick_stock_sizer, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=10)
-        pick_para_sizer.Add(self.remove_st_sizer, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=10)
-        pick_para_sizer.Add(self.mark_self_box_sizer, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=10)
+        pick_para_sizer.Add(self.adv_select_sizer, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=10)
         pick_para_sizer.Add(self.src_dat_sizer, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=10)
-        pick_para_sizer.Add(self.FlexGridSizer, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=10)
+        pick_para_sizer.Add(self.start_pick_but, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=10)
 
         return pick_para_sizer
 
@@ -636,7 +628,7 @@ class UserFrame(wx.Frame):
 
         self.mult_analyse_box = wx.StaticBox(self, -1, u'组合分析股票池')
         self.mult_analyse_sizer = wx.StaticBoxSizer(self.mult_analyse_box, wx.VERTICAL)
-        self.listBox = wx.ListBox(self, -1, size=(250, 150), choices=[], style=wx.LB_EXTENDED)
+        self.listBox = wx.ListBox(self, -1, size=(self.M1_width, self.M1S2_length), choices=[], style=wx.LB_EXTENDED)
         self.listBox.Bind(wx.EVT_LISTBOX_DCLICK, self._ev_list_select)
         self.mult_analyse_sizer.Add(self.listBox, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=2)
 
@@ -647,8 +639,8 @@ class UserFrame(wx.Frame):
         # 创建并初始化系统日志框
         self.sys_log_box = wx.StaticBox(self, -1, u'系统日志')
         self.sys_log_sizer = wx.StaticBoxSizer(self.sys_log_box, wx.VERTICAL)
-        self.sys_log_tx = wx.TextCtrl(self, style=wx.TE_MULTILINE, size=(250, 250))
-        self.sys_log_sizer.Add(self.sys_log_tx, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=2)
+        self.sys_log_tx = wx.TextCtrl(self, style=wx.TE_MULTILINE, size=(self.M1_width, self.M1S1_length))
+        self.sys_log_sizer.Add(self.sys_log_tx, proportion=1, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=2)
         return self.sys_log_sizer
 
     def refresh_grid(self, df, back_col=""):
@@ -710,13 +702,31 @@ class UserFrame(wx.Frame):
 
         self.pick_graph_last = item
 
-    def _ev_start_select(self, event):
+    def _ev_select_seq(self, event):
+
+        select_msg = ChoiceDialog(u"选股流程点击处理事件",  [u"第一步:刷新选股数据",
+                                                        u"第二步:开始条件选股",
+                                                        u"第三步:保存选股结果"])
+
+        if select_msg == u"第一步:刷新选股数据":
+            self._download_st_data()
+
+        elif select_msg == u"第二步:开始条件选股":
+            self._start_st_slect()
+
+        elif select_msg == u"第三步:保存选股结果":
+            self._save_st_result()
+
+        else:
+            pass
+
+    def _start_st_slect(self):
 
         if self.df_use.empty == True:
             MessageDialog("请先获取选股数据！")
             return
 
-        if self.mark_self_box_chk.GetValue() == True: # 复选框被选中
+        if self.mark_self_chk.GetValue() == True:  # 复选框被选中
             MessageDialog("先取消复选框！！！")
             return
 
@@ -725,9 +735,9 @@ class UserFrame(wx.Frame):
             self.df_use.dropna(subset=['股票名称'], inplace=True)
             self.df_use = self.df_use[self.df_use['股票名称'].apply(lambda x: x.find('ST') < 0)]
 
-        val = self.pick_item_cmbo.GetStringSelection() # 获取当前选股combox的选项
+        val = self.pick_item_cmbo.GetStringSelection()  # 获取当前选股combox的选项
 
-        if val in self.df_use.columns.tolist(): # DataFrame中是否存在指标
+        if val in self.df_use.columns.tolist():  # DataFrame中是否存在指标
 
             para_value = self.pick_value_text.GetValue()
 
@@ -737,10 +747,10 @@ class UserFrame(wx.Frame):
 
                 if self.pick_cond_cmbo.GetStringSelection() == u"等于":
                     self.filte_result = pd.DataFrame()
-                    for value in para_values.split("|"): # 支持用"｜"符号查询多个
+                    for value in para_values.split("|"):  # 支持用"｜"符号查询多个
                         self.filte_result = pd.concat([self.filte_result, self.df_use[self.df_use[val] == value]])
                 else:
-                    MessageDialog("【%s】选项只支持【等于】条件判断！！！"%(val))
+                    MessageDialog("【%s】选项只支持【等于】条件判断！！！" % (val))
                     return
 
             if self.pick_cond_cmbo.GetStringSelection() == u"大于":
@@ -772,10 +782,9 @@ class UserFrame(wx.Frame):
             else:
                 MessageDialog("未找到符合条件的数据！！！")
 
+    def _download_st_data(self): # 复位选股按钮事件
 
-    def _ev_start_reset(self, event): # 复位选股按钮事件
-
-        if self.mark_self_box_chk.GetValue() == True: # 复选框被选中
+        if self.mark_self_chk.GetValue() == True: # 复选框被选中
             MessageDialog("先取消复选框！！！")
             return
 
@@ -847,59 +856,31 @@ class UserFrame(wx.Frame):
             if self.src_dat_cmbo.GetStringSelection() == "爬虫每日指标":
 
                 if MessageDialog('是否查看Web版【板块-个股-涨跌幅】集合') == "点击Yes":
-                    try:
-                        bk_to_pct = self.df_join.groupby(u'所属行业')[u'涨跌幅'].mean()
-                        st_to_pct = self.df_join.groupby([u'所属行业', u'股票名称'])[u'涨跌幅'].mean()
+                    #try:
+                    bk_to_pct = self.df_join.groupby(u'所属行业')[u'涨跌幅'].mean()
+                    st_to_pct = self.df_join.groupby([u'所属行业', u'股票名称'])[u'涨跌幅'].mean()
 
-                        bk_treemap = []
+                    bk_treemap = []
 
-                        for bk_name, bk_pct in bk_to_pct.items():
-                            child_treemap = []
+                    for bk_name, bk_pct in bk_to_pct.items():
+                        child_treemap = []
 
-                            for st_name, st_pct in st_to_pct[bk_name].items():
-                                child_treemap.append({"value": round(st_pct, 2), "name": st_name})
+                        for st_name, st_pct in st_to_pct[bk_name].items():
+                            child_treemap.append({"value": round(st_pct, 2), "name": st_name})
 
-                            bk_treemap.append({"value": round(bk_pct, 2), "name": bk_name, "children": child_treemap})
+                        bk_treemap.append({"value": round(bk_pct, 2), "name": bk_name, "children": child_treemap})
 
-                        Pyechart_Drive.TreeMap_Handle(bk_treemap, "所属行业-个股-涨幅%", "行业板块")
+                    Pyechart_Drive.TreeMap_Handle(bk_treemap, "所属行业-个股-涨幅%", "行业板块")
 
-                        web_disp = WebDialog(self, "", "treemap_base.html")
-                        if web_disp.ShowModal() == wx.ID_OK:
-                            pass
-                    except:
-                        MessageDialog("html文件加载出错，可前往文件夹点击查看！")
+                    web_disp = WebDialog(self, "", "treemap_base.html")
+                    if web_disp.ShowModal() == wx.ID_OK:
+                        pass
+                    #except:
+                    #    MessageDialog("html文件加载出错，可前往文件夹点击查看！")
 
+    def _save_st_result(self):
 
-    def _ev_mark_self(self, event):
-        # 标记自选股事件
-
-        if self.df_use.empty == True:
-            MessageDialog("无选股数据！")
-        else:
-            self.df_use.reset_index(drop=True, inplace=True) # 重排索引
-
-            if self.mark_self_box_chk.GetValue() == True: # 复选框被选中
-
-                for code in list(self.code_pool.load_pool_stock().values()): # 加载自选股票池
-                    symbol, number = code.upper().split('.')
-                    new_code = number + "." + symbol
-                    n_list = self.df_use[self.df_use["股票代码"] == new_code].index.tolist()
-                    if n_list != []:
-                        self.grid_pk.SetCellBackgroundColour(n_list[0], 0, wx.YELLOW)
-                        self.grid_pk.SetCellBackgroundColour(n_list[0], 1, wx.YELLOW)
-            else:
-                for code in list(self.code_pool.load_pool_stock().values()): # 加载自选股票池
-                    symbol, number = code.upper().split('.')
-                    new_code = number + "." + symbol
-                    n_list = self.df_use[self.df_use["股票代码"] == new_code].index.tolist()
-                    if n_list != []:
-                        self.grid_pk.SetCellBackgroundColour(n_list[0], 0, wx.WHITE)
-                        self.grid_pk.SetCellBackgroundColour(n_list[0], 1, wx.WHITE)
-            self.grid_pk.Refresh()
-
-    def _ev_start_save(self, event):
         # 保存选股按钮事件
-
         if self.src_dat_cmbo.GetStringSelection() == "tushare每日指标" or \
             self.src_dat_cmbo.GetStringSelection() == "离线每日指标" or \
             self.src_dat_cmbo.GetStringSelection() == "爬虫每日指标":
@@ -932,6 +913,33 @@ class UserFrame(wx.Frame):
             pass
         self.grid_pl.SetTable(self.code_pool.load_self_pool(), ["自选股", "代码"])
         #self.df_use.to_csv('table-stock.csv', columns=self.df_use.columns, index=True, encoding='GB18030')
+
+    def _ev_mark_self(self, event):
+        # 标记自选股事件
+
+        if self.df_use.empty == True:
+            MessageDialog("无选股数据！")
+        else:
+            self.df_use.reset_index(drop=True, inplace=True) # 重排索引
+
+            if self.mark_self_box_chk.GetValue() == True: # 复选框被选中
+
+                for code in list(self.code_pool.load_pool_stock().values()): # 加载自选股票池
+                    symbol, number = code.upper().split('.')
+                    new_code = number + "." + symbol
+                    n_list = self.df_use[self.df_use["股票代码"] == new_code].index.tolist()
+                    if n_list != []:
+                        self.grid_pk.SetCellBackgroundColour(n_list[0], 0, wx.YELLOW)
+                        self.grid_pk.SetCellBackgroundColour(n_list[0], 1, wx.YELLOW)
+            else:
+                for code in list(self.code_pool.load_pool_stock().values()): # 加载自选股票池
+                    symbol, number = code.upper().split('.')
+                    new_code = number + "." + symbol
+                    n_list = self.df_use[self.df_use["股票代码"] == new_code].index.tolist()
+                    if n_list != []:
+                        self.grid_pk.SetCellBackgroundColour(n_list[0], 0, wx.WHITE)
+                        self.grid_pk.SetCellBackgroundColour(n_list[0], 1, wx.WHITE)
+            self.grid_pk.Refresh()
 
     def _ev_trade_log(self, event):
 
@@ -1039,7 +1047,8 @@ class UserFrame(wx.Frame):
                                                         u"加入组合分析池",
                                                         u"查看行情走势",
                                                         u"查看F10资料",
-                                                        u"K线自动播放"
+                                                        u"K线自动播放",
+                                                        u"导入离线数据"
                                                         ])
 
         if select_msg == u"查看行情走势":
@@ -1102,6 +1111,42 @@ class UserFrame(wx.Frame):
 
             dialog = AnimationDialog(self, u"K线自动播放", self.stock_dat)
             dialog.Show()
+
+        elif select_msg == u"导入离线数据":
+
+            if MessageDialog("请手动填写[股票名称][股票周期][股票复权]！\n该内容与图表标签相关！\n点击Yes继续；点击No去配置") == "点击No":
+                return
+
+            # 第一步:收集导入文件路径/名称/周期/起始时间
+            get_path = ImportFileDiag()
+            st_code = self.stock_code_input.GetValue()
+            st_name = self.code_table.get_name(st_code)
+            st_period = self.stock_period_cbox.GetValue()
+            sdate_obj = self.dpc_start_time.GetValue()
+            edate_obj = self.dpc_end_time.GetValue()
+
+            # 第二步:加载csv文件中的数据
+            if get_path != '':
+                self.stock_dat = self.call_method(self.event_task['get_csvst_dat'],
+                                                  get_path=get_path, sdate_obj=sdate_obj, edate_obj=edate_obj)
+
+                if self.stock_dat.empty == True:
+                    MessageDialog("文件内容为空！\n")
+                else:
+
+                    # 第三步:绘制可视化图形
+                    if self.pick_graph_cbox.GetSelection() != 0:
+                        self.DispPanelA.clear_subgraph()  # 必须清理图形才能显示下一幅图
+                        self.DispPanelA.draw_subgraph(self.stock_dat, "csv导入" + st_code, st_name)
+                    else:
+                        # 配置图表属性
+                        firm_para = self.call_method(self.event_task['cfg_firm_para'],
+                                                     st_code="csv导入" + st_code,
+                                                     st_name=st_name,
+                                                     st_period=st_period,
+                                                     st_auth="不复权")
+                        self.DispPanelA.firm_graph_run(self.stock_dat, **firm_para)
+                    self.DispPanelA.update_subgraph()  # 必须刷新才能显示下一幅图
         else:
             pass
 
@@ -1199,42 +1244,6 @@ class UserFrame(wx.Frame):
 
         else:
             MessageDialog("请点击股票代码或股票名称！")
-
-    def _ev_import_dat(self, event): # 点击导入股票数据
-
-        if MessageDialog("请手动填写[股票名称][股票周期][股票复权]！\n该内容与图表标签相关！\n点击Yes继续；点击No去配置")== "点击No":
-            return
-
-        # 第一步:收集导入文件路径/名称/周期/起始时间
-        get_path = ImportFileDiag()
-        st_code = self.stock_code_input.GetValue()
-        st_name = self.code_table.get_name(st_code)
-        st_period = self.stock_period_cbox.GetValue()
-        sdate_obj = self.dpc_start_time.GetValue()
-        edate_obj = self.dpc_end_time.GetValue()
-
-        # 第二步:加载csv文件中的数据
-        if get_path != '':
-            self.stock_dat = self.call_method(self.event_task['get_csvst_dat'],
-                                            get_path=get_path, sdate_obj=sdate_obj, edate_obj=edate_obj)
-
-            if self.stock_dat.empty == True:
-                MessageDialog("文件内容为空！\n")
-            else:
-
-                # 第三步:绘制可视化图形
-                if self.pick_graph_cbox.GetSelection() != 0:
-                    self.DispPanelA.clear_subgraph()  # 必须清理图形才能显示下一幅图
-                    self.DispPanelA.draw_subgraph(self.stock_dat, "csv导入"+st_code, st_name)
-                else:
-                    # 配置图表属性
-                    firm_para = self.call_method(self.event_task['cfg_firm_para'],
-                                                 st_code="csv导入"+st_code,
-                                                 st_name=st_name,
-                                                 st_period=st_period,
-                                                 st_auth="不复权")
-                    self.DispPanelA.firm_graph_run(self.stock_dat, **firm_para)
-                self.DispPanelA.update_subgraph()  # 必须刷新才能显示下一幅图
 
     def _ev_src_choose(self, event):
         # 预留

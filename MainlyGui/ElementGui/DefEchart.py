@@ -14,9 +14,9 @@ from pyecharts.charts import TreeMap
 
 from CommIf.SysFile import Base_File_Oper
 
-class WebPanel(wx.Panel):
+load_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__))) + '/DataFiles/'
 
-    load_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__))) + '/DataFiles/'
+class WebPanel(wx.Panel):
 
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=-1)
@@ -98,14 +98,13 @@ class WebPanel(wx.Panel):
             Grid(init_opts=opts.InitOpts(height="450px", width = "800px")) # 调整尺寸-height和width数值
                 .add(bar, grid_opts=opts.GridOpts(pos_top="60%"), grid_index=0)
                 .add(overlap_1, grid_opts=opts.GridOpts(pos_bottom="40%"), grid_index=1)
-                .render(self.load_path + r"grid_vertical.html")  # raw string 非转义 string
+                .render(load_path + r"grid_vertical.html")  # raw string 非转义 string
         )
 
-        with open(self.load_path + "grid_vertical.html", 'r') as f:
+        with open(load_path + "grid_vertical.html", 'r') as f:
             html_cont = f.read()
         self.browser.SetPage(html_cont, "")
         self.browser.Show()
-
 
 class WebGraphs(wx.Panel):
 
@@ -161,5 +160,6 @@ class Pyechart_Drive():
                 legend_opts=opts.LegendOpts(is_show=False),
                 title_opts=opts.TitleOpts(title=title)
             )
-                .render("treemap_base.html")
+                .render(load_path + "treemap_base.html")
         )
+

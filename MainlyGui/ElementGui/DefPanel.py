@@ -36,8 +36,11 @@ class BasePanel(wx.Panel):
         self.figure = Figure(figsize=(sys_para["multi-panels"]["mpl_fig_x"],
                                       sys_para["multi-panels"]["mpl_fig_y"])) # 调整尺寸-figsize(x,y)
 
-        gs = gridspec.GridSpec(2, 1, left=0.1, bottom=0.15, right=0.95, top=0.90, wspace=None, hspace=0.1,
-                               height_ratios=[3.5, 1])
+        gs = gridspec.GridSpec(2, 1, left=sys_para["multi-panels"]["mpl_fig_left"],
+                                    bottom=sys_para["multi-panels"]["mpl_fig_bottom"],
+                                    right=sys_para["multi-panels"]["mpl_fig_right"],
+                                    top=sys_para["multi-panels"]["mpl_fig_top"],
+                                     wspace=None, hspace=0.1, height_ratios=[3.5, 1])
 
         self.ochl = self.figure.add_subplot(gs[0, :])
         self.vol = self.figure.add_subplot(gs[1, :])
@@ -49,27 +52,14 @@ class BasePanel(wx.Panel):
         self.SetSizer(self.TopBoxSizer)
 
 
-class StockPanel(wx.Panel):
+class StockPanel:
     def __init__(self, parent):
-        wx.Panel.__init__(self, parent=parent, id=-1)
+        self.disp_panel = BasePanel(parent)  # 自定义
+        self.figure = self.disp_panel.figure
+        self.ochl = self.disp_panel.ochl
+        self.vol = self.disp_panel.vol
 
-        sys_para = Base_File_Oper.load_sys_para("sys_para.json")
-
-        # 分割子图实现代码
-        self.figure = Figure(figsize=(sys_para["multi-panels"]["mpl_fig_x"],
-                                      sys_para["multi-panels"]["mpl_fig_y"])) # 调整尺寸-figsize(x,y)
-
-        gs = gridspec.GridSpec(2, 1, left=0.1, bottom=0.15, right=0.95, top=0.90, wspace=None, hspace=0.1,
-                               height_ratios=[3.5, 1])
-
-        self.ochl = self.figure.add_subplot(gs[0, :])
-        self.vol = self.figure.add_subplot(gs[1, :])
-
-        self.FigureCanvas = FigureCanvas(self, -1, self.figure)  # figure加到FigureCanvas
-        self.TopBoxSizer = wx.BoxSizer(wx.VERTICAL)
-        self.TopBoxSizer.Add(self.FigureCanvas, proportion=10, border=2, flag=wx.ALL | wx.EXPAND)
-
-        self.SetSizer(self.TopBoxSizer)
+        self.FigureCanvas = self.disp_panel.FigureCanvas
 
     def clear_subgraph(self):
         # 再次画图前,必须调用该命令清空原来的图形
@@ -135,7 +125,7 @@ class StockPanel(wx.Panel):
         self.ochl.grid(True, color='k')
         self.vol.grid(True, color='k')
 
-class SubGraphs(wx.Panel):
+class SubGraphs:
     def __init__(self, parent):
 
         # 创建FlexGridSizer布局网格 vgap定义垂直方向上行间距/hgap定义水平方向上列间距
@@ -146,13 +136,13 @@ class SubGraphs(wx.Panel):
         self.DispPanel3 = StockPanel(parent)  # 自定义
 
         # 加入Sizer中
-        self.FlexGridSizer.Add(self.DispPanel0, proportion=1, border=2,
+        self.FlexGridSizer.Add(self.DispPanel0.disp_panel, proportion=1, border=2,
                                flag=wx.RIGHT | wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
-        self.FlexGridSizer.Add(self.DispPanel1, proportion=1, border=2,
+        self.FlexGridSizer.Add(self.DispPanel1.disp_panel, proportion=1, border=2,
                                flag=wx.RIGHT | wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
-        self.FlexGridSizer.Add(self.DispPanel2, proportion=1, border=2,
+        self.FlexGridSizer.Add(self.DispPanel2.disp_panel, proportion=1, border=2,
                                flag=wx.RIGHT | wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
-        self.FlexGridSizer.Add(self.DispPanel3, proportion=1, border=2,
+        self.FlexGridSizer.Add(self.DispPanel3.disp_panel, proportion=1, border=2,
                                flag=wx.RIGHT | wx.EXPAND | wx.ALIGN_CENTER_VERTICAL)
         self.FlexGridSizer.SetFlexibleDirection(wx.BOTH)
 

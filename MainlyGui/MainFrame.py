@@ -12,9 +12,8 @@ class MainFrame(wx.Frame):
 
     rel_path = os.path.dirname(os.path.dirname(__file__)) + '/ConfigFiles/'
 
-    def __init__(self, parent=None, id=-1, Fun_SwFrame=None):
+    def __init__(self, parent=None, id=-1, displaySize=(1600, 900), Fun_SwFrame=None):
 
-        displaySize = wx.DisplaySize()  # (1920, 1080)
         displaySize = 0.05 * displaySize[0], 0.35 * displaySize[1]
 
         wx.Frame.__init__(self, parent=None, title=u'', size=displaySize, style=wx.DEFAULT_FRAME_STYLE)

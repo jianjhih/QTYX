@@ -13,14 +13,12 @@ from MainlyGui.ElementGui.DefDialog import MessageDialog
 
 class ConfFrame(wx.Frame):
 
-    def __init__(self, parent=None, id=-1, Fun_SwFrame=None):
+    def __init__(self, parent=None, id=-1, displaySize=(1600, 900), Fun_SwFrame=None):
 
-        # hack to help on dual-screen, need something better XXX - idfah
-        displaySize = wx.DisplaySize()  # (1920, 1080)
-        displaySize = 0.5 * displaySize[0], 0.4 * displaySize[1]
+        displaySize_shrink = 0.7*displaySize[0], 0.6*displaySize[1]
 
         # call base class constructor
-        wx.Frame.__init__(self, parent=None, title=u'配置工具', size=displaySize, style=wx.DEFAULT_FRAME_STYLE)  # size=(1000,600)
+        wx.Frame.__init__(self, parent=None, title=u'配置工具', size=displaySize_shrink, style=wx.DEFAULT_FRAME_STYLE)
 
         # 用于量化工具集成到整体系统中
         self.fun_swframe = Fun_SwFrame
@@ -98,7 +96,11 @@ class ConfFrame(wx.Frame):
         self.sys_ind = {u'多子图MPL的单幅X大小': ["mpl_fig_x", 201],
                         u'多子图MPL的单幅Y大小': ["mpl_fig_y", 202],
                         u'多子图WEB的单幅X大小': ["web_size_x", 203],
-                        u'多子图WEB的单幅Y大小': ["web_size_y", 204]}
+                        u'多子图WEB的单幅Y大小': ["web_size_y", 204],
+                        u'多子图MPL与左边框距离': ["mpl_fig_left", 205],
+                        u'多子图MPL与右边框距离': ["mpl_fig_right", 206],
+                        u'多子图MPL与上边框距离': ["mpl_fig_top", 207],
+                        u'多子图MPL与下边框距离': ["mpl_fig_bottom", 208]}
 
         self.firm_mpl = {u'行情MPL与左边框距离': ["left", 301],
                          u'行情MPL与右边框距离': ["right", 302],

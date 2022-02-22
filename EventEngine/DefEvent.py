@@ -120,24 +120,31 @@ class EventHandle:
         st_code = kwargs["st_code"]
 
         # 计算当前季度
-        cur_year = int(datetime.datetime.now().strftime("%Y"))
-        cur_quarter = (int(datetime.datetime.now().strftime("%m")) - 1) // 3 + 1 # 向下取整数
+        cur_year = datetime.datetime.now().year
+        cur_quarter = (datetime.datetime.now().month - 1) // 3 + 1 # 向下取整数
+
+        if cur_quarter == 1:
+            pre_fst_year = cur_year - 1
+            pre_fst_quarter = 4
+        else:
+            pre_fst_year = cur_year
+            pre_fst_quarter = cur_quarter - 1
+
+        if pre_fst_quarter == 1:
+            pre_sec_year = pre_fst_year - 1
+            pre_sec_quarter = 4
+        else:
+            pre_sec_year = pre_fst_year
+            pre_sec_quarter = pre_fst_quarter - 1
 
         try:
-            # 获取当前季度的现金流量数据
-            df = bs_cash_flow_stock(st_code, cur_year, cur_quarter)
+            # 因为公告发布延迟 获取上季度的现金流量数据
+            df = bs_cash_flow_stock(st_code, pre_fst_year, pre_fst_quarter)
             if df.empty == True:
-                # 获取上一季度的现金流量数据
-                if (cur_quarter - 1) <= 0:
-                    last_year = cur_year - 1
-                    last_quarter = 4
-                else:
-                    last_year = cur_year
-                    last_quarter = cur_quarter - 1
-                df = bs_cash_flow_stock(st_code, last_year, last_quarter)
+                # 获取上上一季度的现金流量数据
+                df = bs_cash_flow_stock(st_code, pre_sec_year, pre_sec_quarter)
         except:
             df = pd.DataFrame()
-
 
         if df.empty != True:
 
@@ -214,7 +221,7 @@ class EventHandle:
         # 更新回测参数
         back_para['subplots_dict']['graph_sec']['graph_type']['cash_profit']['cash_hold'] = cash_value
         back_para['subplots_dict']['graph_sec']['graph_type']['cash_profit']['slippage'] = slippage_value
-        back_para['subplots_dict']['graph_sec']['graph_type']['cash_profit']['c_rate'] = commission_value机构
+        back_para['subplots_dict']['graph_sec']['graph_type']['cash_profit']['c_rate'] = commission_value
         back_para['subplots_dict']['graph_sec']['graph_type']['cash_profit']['t_rate'] = tax_value
         back_para['subplots_dict']['graph_sec']['graph_type']['cash_profit']['stake_size'] = stake_value
         back_para['subplots_dict']['graph_fst']['title'] = st_code + "-回测分析"

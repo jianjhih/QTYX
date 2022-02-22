@@ -54,9 +54,8 @@ def ImportFileDiag():
 
 class GroupPctDiag(wx.Dialog):  # 多股收益率/波动率分析
 
-    def __init__(self, parent, title=u"自定义提示信息", set_stocks=[], mean_val=[], std_val=[]):
-        wx.Dialog.__init__(self, parent, -1, title, size=(700, 500),
-                           style=wx.CAPTION | wx.CLOSE_BOX | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX)
+    def __init__(self, parent, title=u"自定义提示信息", set_stocks=[], mean_val=[], std_val=[], size=(700, 500)):
+        wx.Dialog.__init__(self, parent, -1, title, size=size, style=wx.DEFAULT_FRAME_STYLE)
 
         self.stock_set = set_stocks
         self.mean = mean_val
@@ -91,9 +90,8 @@ class GroupPctDiag(wx.Dialog):  # 多股收益率/波动率分析
 
 class GroupTrendDiag(wx.Dialog):  # 行情走势叠加分析
 
-    def __init__(self, parent, title=u"自定义提示信息", set_stocks=[], df_stcok=[]):
-        wx.Dialog.__init__(self, parent, -1, title, size=(700, 500),
-                           style=wx.CAPTION | wx.CLOSE_BOX | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX)
+    def __init__(self, parent, title=u"自定义提示信息", set_stocks=[], df_stcok=[], size=(700, 500)):
+        wx.Dialog.__init__(self, parent, -1, title, size=size, style=wx.DEFAULT_FRAME_STYLE)
 
         self.stock_set = set_stocks
         self.df_stcok = df_stcok
@@ -116,9 +114,8 @@ class GroupTrendDiag(wx.Dialog):  # 行情走势叠加分析
 
 class UserDialog(wx.Dialog):  # user-defined
 
-    def __init__(self, parent, title=u"自定义提示信息", label=u"自定义日志"):
-        wx.Dialog.__init__(self, parent, -1, title, size=(700, 500),
-                           style=wx.CAPTION | wx.CLOSE_BOX | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX)
+    def __init__(self, parent, title=u"自定义提示信息", label=u"自定义日志", size=(700, 500)):
+        wx.Dialog.__init__(self, parent, -1, title, size=size, style=wx.DEFAULT_FRAME_STYLE)
 
         self.log_tx_input = wx.TextCtrl(self, -1, "", size=(600, 400), style=wx.TE_MULTILINE | wx.TE_READONLY)  # 多行|只读
         self.log_tx_input.SetFont(wx.Font(14, wx.DEFAULT, wx.NORMAL, wx.BOLD))
@@ -156,9 +153,8 @@ class ProgressDialog():
 
 class BrowserF10(wx.Dialog):
 
-    def __init__(self, parent, title=u"自定义提示信息", code="300180"):
-        wx.Dialog.__init__(self, parent, -1, title, size=(1000, 900),
-                           style=wx.CAPTION | wx.CLOSE_BOX | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX)
+    def __init__(self, parent, title=u"自定义提示信息", code="300180", size=(1000, 900)):
+        wx.Dialog.__init__(self, parent, -1, title, size, style=wx.DEFAULT_FRAME_STYLE)
 
         if '.' in code:
             code = code.split('.')[1]
@@ -182,31 +178,22 @@ class WebDialog(wx.Dialog):  # user-defined
 
     load_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__))) + '/DataFiles/'
 
-    def __init__(self, parent, title=u"Web显示", file_name='treemap_base.html'):
+    def __init__(self, parent, title=u"Web显示", file_name='treemap_base.html', size=(1200, 900)):
 
-        displaySize = wx.DisplaySize()  # (1920, 1080)
-        displaySize = 0.8 * displaySize[0], 0.85 * displaySize[1]
+        wx.Dialog.__init__(self, parent, -1, title, size=size, style=wx.DEFAULT_FRAME_STYLE)
 
-        wx.Dialog.__init__(self, parent, -1, title, size=displaySize,
-                           style=wx.CAPTION | wx.CLOSE_BOX | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX)
-
-        self.DispPanel = wx.Panel(self, -1)
-        self.browser = wx.html2.WebView.New(self.DispPanel, -1, size=displaySize)
-
+        self.browser = wx.html2.WebView.New(self, -1, size=size)
         with open(self.load_path + file_name, 'r') as f:
             html_cont = f.read()
-
         self.browser.SetPage(html_cont, "")
-
         self.browser.Show()
 
 class DouBottomDialog(wx.Dialog):  # 双底形态参数
 
     load_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__))) + '/ConfigFiles/'
 
-    def __init__(self, parent, title=u"自定义提示信息"):
-        wx.Dialog.__init__(self, parent, -1, title, size=(700, 750),
-                           style=wx.CAPTION | wx.CLOSE_BOX | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX)
+    def __init__(self, parent, title=u"自定义提示信息", size=(700, 750)):
+        wx.Dialog.__init__(self, parent, -1, title, size=size, style = wx.DEFAULT_FRAME_STYLE)
 
         # 创建FlexGridSizer布局网格
         # rows 定义GridSizer行数
@@ -304,9 +291,8 @@ class DouBottomDialog(wx.Dialog):  # 双底形态参数
 
 class RpsTop10Dialog(wx.Dialog):  # RPS-10参数
 
-    def __init__(self, parent, title=u"自定义提示信息"):
-        wx.Dialog.__init__(self, parent, -1, title, size=(250, 360),
-                           style=wx.CAPTION | wx.CLOSE_BOX | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX)
+    def __init__(self, parent, title=u"自定义提示信息", size=(250, 360)):
+        wx.Dialog.__init__(self, parent, -1, title, size=size, style=wx.DEFAULT_FRAME_STYLE)
 
         # 创建FlexGridSizer布局网格
         # rows 定义GridSizer行数
@@ -377,10 +363,8 @@ class RpsTop10Dialog(wx.Dialog):  # RPS-10参数
 
 class ViewGripDiag(wx.Dialog):
 
-    def __init__(self, parent, title=u"表格数据显示", update_df=[]):
-        wx.Dialog.__init__(self, parent, -1, title, size=(750, 500),
-                           style=wx.CAPTION | wx.CLOSE_BOX | wx.MAXIMIZE_BOX | wx.MINIMIZE_BOX)
-
+    def __init__(self, parent, title=u"表格数据显示", update_df=[], size=(750, 500)):
+        wx.Dialog.__init__(self, parent, -1, title, size=size, style = wx.DEFAULT_FRAME_STYLE)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
 

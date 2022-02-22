@@ -27,9 +27,8 @@ class AnimationDialog(wx.Dialog):
 
     bars_range = 100 # 显示100个bars
 
-    def __init__(self, parent, title=u"表格数据显示", update_df=[]):
-        wx.Dialog.__init__(self, parent, -1, title, size=(850, 800),
-                           style=wx.DEFAULT_FRAME_STYLE)
+    def __init__(self, parent, title=u"K线自动播放", update_df=[], size=(850, 800)):
+        wx.Dialog.__init__(self, parent, -1, title, size=size, style=wx.DEFAULT_FRAME_STYLE)
 
         self.SetBackgroundColour(wx.Colour('#EBEDEB'))
 
@@ -54,8 +53,9 @@ class AnimationDialog(wx.Dialog):
         self.btns_Sizer.Add(self.cancel_btn, flag=wx.ALIGN_CENTER)
 
         self.vbox_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.vbox_sizer.Add(self.disp_panel, 1, wx.ALL, 50)
-        self.vbox_sizer.Add(self.btns_Sizer, 1, wx.ALL, 50)
+        self.vbox_sizer.Add(self.disp_panel, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
+        self.vbox_sizer.Add(self.btns_Sizer, proportion=1, flag=wx.EXPAND | wx.ALL, border=5)
+
         self.SetSizer(self.vbox_sizer)
         self.Layout()
         #self.vbox_sizer.Fit(self)
