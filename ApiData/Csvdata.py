@@ -4,6 +4,10 @@
 
 import pandas as pd
 
+from CommIf.DatHandle import day_down_resample, \
+                             day_to_qfq, \
+                             day_to_hfq
+
 class Csv_Backend():
 
     def __init__(self, src):
@@ -128,7 +132,12 @@ class Csv_Backend():
         return csv_df
 
     @staticmethod
-    def load_stock_data(path, sdate, edate):
+    def load_stock_data(path, sdate, edate, adjust_val='不复权', period_val='周线'):
+        # sdate:datetime格式,获取数据的开始时间
+        # edate:datetime格式,获取数据的结束时间
+
+        # sdate.strftime('%Y-%m-%d %H:%M')
+        # edate.strftime('%Y-%m-%d %H:%M')
 
         MAX_DISP_DATA = 1440 # 最大支持1分钟数据-1天
 
@@ -150,15 +159,68 @@ class Csv_Backend():
         if temp_df.index[0] > temp_df.index[-1]:
             temp_df.sort_index(inplace=True)  # 升序排列
 
-        if 'Close' not in temp_df.columns.tolist():
-            # 为保持于书中的DataFrame格式一致 重命名列名
-            recon_data = {'High': temp_df[u"最高价"],
-                          'Low': temp_df[u"最低价"],
-                          'Open': temp_df[u"开盘价"],
-                          'Close': temp_df[u"收盘价"],
-                          'Volume': temp_df[u"成交量"]}
+        # 取数据的有效时间范围
+        sdate = temp_df.index[0] if sdate < temp_df.index[0] else sdate
+        edate = temp_df.index[-1] if edate > temp_df.index[-1] else edate
 
-            temp_df = pd.DataFrame(recon_data)
+        # 保证计算复权时数据包含涨跌幅
+        if (adjust_val == '前复权' or
+            adjust_val == '后复权') and (
+                ('Pctchg' in temp_df.columns.tolist()) or
+                ('涨跌幅' in temp_df.columns.tolist())):
+
+            if 'Close' not in temp_df.columns.tolist():
+                # 为保持于书中的DataFrame格式一致 重命名列名
+                recon_data = {'High': temp_df[u"最高价"],
+                              'Low': temp_df[u"最低价"],
+                              'Open': temp_df[u"开盘价"],
+                              'Close': temp_df[u"收盘价"],
+                              'Volume': temp_df[u"成交量"],
+                              'Pctchg': temp_df[u"涨跌幅"]}
+                temp_df = pd.DataFrame(recon_data)
+
+        else:
+            adjust_val = '不复权'
+
+            if 'Close' not in temp_df.columns.tolist():
+                # 为保持于书中的DataFrame格式一致 重命名列名
+                recon_data = {'High': temp_df[u"最高价"],
+                              'Low': temp_df[u"最低价"],
+                              'Open': temp_df[u"开盘价"],
+                              'Close': temp_df[u"收盘价"],
+                              'Volume': temp_df[u"成交量"]}
+
+                temp_df = pd.DataFrame(recon_data)
+
+        temp_df.drop(temp_df[(temp_df['Close'] == 0) & (temp_df['Open'] == 0)].index, axis=0, inplace=True)
+
+        if adjust_val == '前复权':
+            temp_df = day_to_qfq(temp_df)
+
+        elif adjust_val == '后复权':
+            # 计算后复权因子
+
+            # 今日收盘价 = 昨日收盘价 * (1+涨跌幅)
+            temp_df['bd_factor'] = (temp_df['Pctchg'] / 100 + 1).cumprod()
+
+            if (temp_df.iloc[0]['Close'] != 0) and (temp_df.iloc[0]['Open'] != 0):
+                initial_price = temp_df.iloc[0]['Close'] / (1 + temp_df.iloc[0]['Pctchg'] / 100)  # 计算上市价格
+            else:
+                # 前一日收盘价
+                initial_price = temp_df.iloc[1]['Close'] / (1 + temp_df.iloc[1]['Pctchg'] / 100)  # 计算上市价格
+
+            temp_df['close_bd'] = initial_price * temp_df['bd_factor']  # 相乘得到复权价
+            temp_df['open_bd'] = temp_df['Open'] / temp_df['Close'] * temp_df['close_bd']
+            temp_df['high_bd'] = temp_df['High'] / temp_df['Close'] * temp_df['close_bd']
+            temp_df['low_bd'] = temp_df['Low'] / temp_df['Close'] * temp_df['close_bd']
+            temp_df['Open'], temp_df['High'], temp_df['Low'], temp_df['Close'] = \
+                temp_df['open_bd'], temp_df['high_bd'], temp_df['low_bd'], temp_df['close_bd']
+        else:
+            # 无需复权
+            pass
+
+        if period_val == '周线':
+            temp_df = day_down_resample(temp_df, 'W-FRI')
 
         if len(temp_df[sdate:edate]) >= MAX_DISP_DATA:
             return temp_df[-MAX_DISP_DATA:]  # 返回指定范围内的数据
@@ -190,63 +252,35 @@ class Csv_Backend():
         """
 
     @staticmethod
-    def load_history_st_data(filename='', adjust_val='不复权'):
-        # stock_dat 数据包含涨跌幅
-        stock_dat = pd.read_csv(filename, index_col=0, parse_dates=[u"日期"],
+    def load_history_st_data(path='', sdate='', edate='', adjust_val='不复权'):
+        # sdate:datetime格式,获取数据的开始时间
+        # edate:datetime格式,获取数据的结束时间
+
+        # stock_dat 数据包含涨跌幅,用于复权计算
+        stock_dat = pd.read_csv(path, index_col=0, parse_dates=[u"日期"],
                                 encoding='GBK',
                                 engine='python')  # 文件名中含有中文时使用engine为python
 
         stock_dat.set_index("日期", drop=True, inplace=True)
         stock_dat.index = stock_dat.index.set_names('Date')
-        stock_dat.index = stock_dat.index.strftime('%Y-%m-%d')
+        #stock_dat.index = stock_dat.index.strftime('%Y-%m-%d') # 使用datetime格式,不用转换为字符串
+
+        # 取数据的有效时间范围
+        sdate = stock_dat.index[0] if sdate < stock_dat.index[0] else sdate
+        edate = stock_dat.index[-1] if edate > stock_dat.index[-1] else edate
+
+        stock_dat.drop(stock_dat[(stock_dat['收盘价'] == 0) & (stock_dat['开盘价'] == 0)].index, axis=0, inplace=True)
 
         if adjust_val == '前复权':
-            # 今日收盘价 = 昨日收盘价 * (1+涨跌幅）——> 昨日收盘价 = 今日收盘价*(1/(1+涨跌幅))
-
-            # 复权处理完成后再排序
-            stock_dat.sort_index(ascending=False, inplace=True)
-
-            # 计算前复权因子
-            stock_dat['fd_factor'] = (1 / (stock_dat['涨跌幅'] / 100 + 1)).cumprod()
-
-            stock_dat['close_fd'] = stock_dat.iloc[0]['收盘价'] * stock_dat['fd_factor']  # 相乘得到后复权价
-            stock_dat['close_fd'] = stock_dat['close_fd'].shift(1)
-            stock_dat.iloc[0, stock_dat.columns.get_loc('close_fd')] = stock_dat.iloc[0, stock_dat.columns.get_loc('收盘价')]
-
-            stock_dat['open_fd'] = stock_dat['开盘价'] / stock_dat['收盘价'] * stock_dat['close_fd']
-            stock_dat['high_fd'] = stock_dat['最高价'] / stock_dat['收盘价'] * stock_dat['close_fd']
-            stock_dat['low_fd'] = stock_dat['最低价'] / stock_dat['收盘价'] * stock_dat['close_fd']
-
-            stock_dat.iloc[0, stock_dat.columns.get_loc('open_fd')] = stock_dat.iloc[0, stock_dat.columns.get_loc('开盘价')]
-            stock_dat.iloc[0, stock_dat.columns.get_loc('high_fd')] = stock_dat.iloc[0, stock_dat.columns.get_loc('最高价')]
-            stock_dat.iloc[0, stock_dat.columns.get_loc('low_fd')] = stock_dat.iloc[0, stock_dat.columns.get_loc('最低价')]
-
-            stock_dat['开盘价'], stock_dat['最高价'], stock_dat['最低价'], stock_dat['收盘价'] = \
-                stock_dat['open_fd'], stock_dat['high_fd'], stock_dat['low_fd'], stock_dat['close_fd']
-            # 复权处理完成后再排序
-            stock_dat.sort_index(ascending=True, inplace=True)
+            stock_dat = day_to_qfq(stock_dat)
 
         elif adjust_val == '后复权':
             # 计算后复权因子
-
-            # 今日收盘价 = 昨日收盘价 * (1+涨跌幅)
-            stock_dat['bd_factor'] = (stock_dat['涨跌幅'] / 100 + 1).cumprod()
-
-            if (stock_dat.iloc[0]['收盘价'] != 0) and (stock_dat.iloc[0]['开盘价'] != 0):
-                initial_price = stock_dat.iloc[0]['收盘价'] / (1 + stock_dat.iloc[0]['涨跌幅'] / 100)  # 计算上市价格
-            else:
-                # 前一日收盘价
-                initial_price = stock_dat.iloc[1]['收盘价'] / (1 + stock_dat.iloc[1]['涨跌幅'] / 100)  # 计算上市价格
-
-            stock_dat['close_bd'] = initial_price * stock_dat['bd_factor']  # 相乘得到复权价
-            stock_dat['open_bd'] = stock_dat['开盘价'] / stock_dat['收盘价'] * stock_dat['close_bd']
-            stock_dat['high_bd'] = stock_dat['最高价'] / stock_dat['收盘价'] * stock_dat['close_bd']
-            stock_dat['low_bd'] = stock_dat['最低价'] / stock_dat['收盘价'] * stock_dat['close_bd']
-            stock_dat['开盘价'], stock_dat['最高价'], stock_dat['最低价'], stock_dat['收盘价'] = \
-                stock_dat['open_bd'], stock_dat['high_bd'], stock_dat['low_bd'], stock_dat['close_bd']
+            stock_dat = day_to_hfq(stock_dat)
         else:
             # 无需复权
             pass
 
-        return stock_dat
+        return stock_dat.loc[sdate:edate] # 返回指定范围内的数据
+
 

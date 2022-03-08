@@ -68,6 +68,8 @@ class EventHandle:
         get_path = kwargs["get_path"]
         sdate_obj = kwargs["sdate_obj"]
         edate_obj = kwargs["edate_obj"]
+        adjust_val = kwargs["st_auth"]
+        period_val = kwargs["st_period"]
 
         # 起始日期和结束日期
         sdate_val = datetime.datetime(sdate_obj.year, sdate_obj.month + 1, sdate_obj.day)
@@ -75,7 +77,7 @@ class EventHandle:
 
         try:
             # 时间格式'%Y-%m-%d %H:%M'能够过滤'%Y-%m-%d'
-            df = Csv_Backend.load_stock_data(get_path, sdate_val.strftime('%Y-%m-%d %H:%M'), edate_val.strftime('%Y-%m-%d %H:%M'))
+            df = Csv_Backend.load_stock_data(get_path, sdate_val, edate_val, adjust_val, period_val)
         except:
             df = pd.DataFrame()
         finally:

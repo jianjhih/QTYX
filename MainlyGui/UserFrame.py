@@ -54,6 +54,7 @@ from ApiData.FromSql import (
 
 from ApiData.CrawerDaily import CrawerDailyBackend
 from ApiData.CrawerNorth import CrawerNorthBackend
+from ApiData.EastmUpLimit import UpLimitBackend
 
 from ApiData.Csvdata import (
     Csv_Backend
@@ -503,13 +504,18 @@ class UserFrame(wx.Frame):
         self.src_dat_sizer = wx.StaticBoxSizer(self.src_dat_box, wx.HORIZONTAL)
 
         self.src_dat_cmbo = wx.ComboBox(sub_panel, -1,  choices=["tushare每日指标",
-                                                                 "爬虫每日指标",
-                                                                 "爬虫北向资金",
+                                                                 "爬虫接口获取",
                                                                  "基金季度持仓",
                                                                  "离线每日指标",
                                                                  "离线业绩预告",
                                                                  "离线财务报告"],
                                             style=wx.CB_READONLY | wx.CB_DROPDOWN)  # 选股项
+
+        # 爬虫接口获取目前支持以下几类
+        self.crawer_backend = {u"爬虫每日指标": CrawerDailyBackend,
+                               u"爬虫北向资金": CrawerNorthBackend,
+                               u"爬虫每日涨停": UpLimitBackend}
+
         self.src_dat_sizer.Add(self.src_dat_cmbo, proportion=0, flag=wx.EXPAND | wx.ALL | wx.CENTER, border=2)
 
         """
@@ -797,20 +803,19 @@ class UserFrame(wx.Frame):
             self.ts_data = Tspro_Backend()
             self.df_join = self.ts_data.datafame_join(sdate_val.strftime('%Y%m%d'))  # 刷新self.df_join
 
-        elif self.src_dat_cmbo.GetStringSelection() == "爬虫每日指标":
-            self.ts_data = CrawerDailyBackend(self.syslog)
-            self.df_join = self.ts_data.datafame_join(sdate_val.strftime('%Y%m%d'))  # 刷新self.df_join
+        elif self.src_dat_cmbo.GetStringSelection() == "爬虫接口获取":
 
-        elif self.src_dat_cmbo.GetStringSelection() == "爬虫北向资金":
-            self.ts_data = CrawerNorthBackend(self.syslog)
+            select_msg = ChoiceDialog(u"爬虫数据类型选择", list(self.crawer_backend.keys()))
+
+            self.ts_data = self.crawer_backend[select_msg](self.syslog)
             self.df_join = self.ts_data.datafame_join(sdate_val.strftime('%Y%m%d'))  # 刷新self.df_join
 
         elif self.src_dat_cmbo.GetStringSelection() == "基金季度持仓":
 
             self.df_join = ReadFundDatFromSql(self.syslog)
             print(self.df_join)
-        else: # 离线csv文件
 
+        else: # 离线csv文件
             # 第一步:收集导入文件路径
             get_path = ImportFileDiag()
 
@@ -1122,13 +1127,16 @@ class UserFrame(wx.Frame):
             st_code = self.stock_code_input.GetValue()
             st_name = self.code_table.get_name(st_code)
             st_period = self.stock_period_cbox.GetValue()
+            st_auth = self.stock_authority_cbox.GetValue()
             sdate_obj = self.dpc_start_time.GetValue()
             edate_obj = self.dpc_end_time.GetValue()
 
             # 第二步:加载csv文件中的数据
             if get_path != '':
                 self.stock_dat = self.call_method(self.event_task['get_csvst_dat'],
-                                                  get_path=get_path, sdate_obj=sdate_obj, edate_obj=edate_obj)
+                                                  get_path=get_path,
+                                                  sdate_obj=sdate_obj, edate_obj=edate_obj,
+                                                  st_auth=st_auth, st_period=st_period)
 
                 if self.stock_dat.empty == True:
                     MessageDialog("文件内容为空！\n")

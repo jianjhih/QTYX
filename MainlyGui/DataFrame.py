@@ -5,21 +5,18 @@
 import os
 import threading
 import queue
-import requests
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
-
-from io import StringIO
-
-from datetime import datetime
-
 import wx
 import wx.gizmos
 import wx.grid
 
+from datetime import datetime
+
 from ApiData.Tushare import basic_code_list
 from ApiData.Csvdata import Csv_Backend
+from ApiData.HistoryOCHLV import download_stock_hist_from_netease
 from MainlyGui.ElementGui.DefDialog import MessageDialog, ViewGripDiag, ProgressDialog, DouBottomDialog, RpsTop10Dialog
 from StrategyGath.PattenGath import Base_Patten_Group
 from StrategyGath.IndicateGath import Base_Indicate_Group
@@ -30,27 +27,8 @@ from CommIf.RemoteInfo import auto_send_email
 q_codes = queue.Queue(5000)
 q_results = queue.Queue(5000)
 
-def get_content_from_internet(url, max_try_num = 10, sleep_time = 5):
-	"""
-	从网页爬取数据
-	@param:url
-	@param:max_try_num
-	@param:sleep_time
-	@return:返回爬取的网页内容
-	"""
-	is_success = False
-	for i in range(max_try_num):
-		try:
-			content = requests.get(url, timeout = 30)
-			content.encoding = 'GBK'
-			is_success = True
-			break
-		except Exception as e:
-			print('第{}次下载数据报错,请检查'.format(i+1))
-			time.sleep(sleep_time)
-
-	if is_success:
-		return content.text.strip()
+# 创建本地存储路径
+data_path = os.path.dirname(os.path.dirname(__file__)) + '/DataFiles/stock_history/'
 
 def save_df_to_csv(df, path, max_try_num = 5, sleep_time = 5):
     """
@@ -81,9 +59,6 @@ def init_down_path(data_path):
         down_stock_list = [f.rstrip('.csv') for f in _files if f.endswith('.csv')]
     return down_stock_list
 
-# 创建本地存储路径
-data_path = os.path.dirname(os.path.dirname(__file__)) + '/DataFiles/stock_history/'
-
 # 创建已下载股票清单
 down_stock_list = init_down_path(data_path) # global
 
@@ -104,28 +79,6 @@ def save_to_csv(df, path, sleep_time = 5):
         print('保存csv文件报错!')
         time.sleep(sleep_time)
     return is_success
-
-def download_stock_hist_from_netease(stock, start = '19900101', end = datetime.now().strftime('%Y%m%d')):
-    """
-    根据股票代码，从网易财经下载股票历史行情数据
-    :param stock: 单支股票的代码 sz000001
-    :param start: 历史行情数据开始时间，默认'19900101'
-    :param end: 历史行情数据结束时间，默认当天
-    :return df: 历史行情DataFrame
-    """
-    stock_type = stock[0:2]
-    stock_symbol = stock[2:8]
-
-    code = '0' + stock_symbol if stock_type == 'sh' else '1' + stock_symbol
-    url = 'http://quotes.money.163.com/service/chddata.html?code={0}&start={1}&end={2}&fields=TCLOSE;HIGH;LOW;TOPEN;LCLOSE;CHG;PCHG;TURNOVER;VOTURNOVER;VATURNOVER;TCAP;MCAP'.format(code, start, end)
-    content = get_content_from_internet(url)
-    content = StringIO(content)
-    df = pd.read_csv(content, parse_dates = ["日期"], na_values = 'None')
-    df['股票代码'] = df['股票代码'].str.lstrip("'")
-    df['股票代码'] = stock_type.lower() + df['股票代码']
-    df.sort_values(by = ['日期'], ascending = True, inplace = True)
-    df.reset_index(drop = True, inplace = True)
-    return df
 
 def get_stock_data(stcok_code):
     """
@@ -595,9 +548,9 @@ class DataFrame(wx.Frame):
     def _ev_switch_menu(self, event):
         self.fun_swframe(0)  # 切换 Frame 主界面
 
-    def _ev_patten_select(self, event):
+    def _collect_paras(self):
 
-        # 第一步: 收集控件中设置的选项
+        # 收集控件中设置的选项
         st_period = self.patten_period_cbox.GetStringSelection()
         st_auth = self.patten_authority_cbox.GetStringSelection()
         sdate_obj = self.patten_start_time.GetValue()
@@ -608,6 +561,15 @@ class DataFrame(wx.Frame):
 
         patten_pool = self.patten_pool_cmbo.GetStringSelection()
 
+        patten_type = self.patten_type_cmbo.GetStringSelection()
+
+        return st_period, st_auth, sdate_val, edate_val, patten_pool, patten_type
+
+    def _ev_patten_select(self, event):
+
+        # 第一步: 收集控件中设置的选项
+        st_period, st_auth, sdate_val, edate_val, patten_pool, patten_type = self._collect_paras()
+
         MessageDialog("温馨提示：为解决全市场股票扫描时的效率问题，在本页面增加选股功能！")
 
         self.patlog.clr_print()
@@ -617,9 +579,9 @@ class DataFrame(wx.Frame):
         count = 0
         df_search = pd.DataFrame()  # 构建一个空的dataframe用来装数据
 
-        if self.patten_type_cmbo.GetStringSelection() == "双底形态":
+        if patten_type == "双底形态":
 
-            proc_dialog = ProgressDialog("开始分析", len(down_stock_list)+1)  # 根据股票数量设置进度条刻度长度
+            proc_dialog = ProgressDialog("开始分析", self.total_len+1)  # 根据股票数量设置进度条刻度长度
 
             patten_recognize = DouBottomDialog(self, "双底形态识别参数配置")
 
@@ -631,8 +593,8 @@ class DataFrame(wx.Frame):
                         code = stcok_code[2:8] + "." + stcok_code[0:2].upper()
                         name = self.stock_tree_info.get(code)
 
-                        stock_dat = Csv_Backend.load_history_st_data(data_path + stcok_code + '.csv', st_auth)
-
+                        stock_dat = Csv_Backend.load_history_st_data(data_path + stcok_code + '.csv',
+                                                                     sdate_val, edate_val, st_auth)
                         recon_data = {'High': stock_dat["最高价"], 'Low': stock_dat["最低价"], 'Open': stock_dat["开盘价"],
                                       'Close': stock_dat["收盘价"], 'Volume': stock_dat["成交量"], 'pctChg': stock_dat["涨跌幅"]}
 
@@ -682,7 +644,7 @@ class DataFrame(wx.Frame):
                             f"{datetime.now().strftime('%y-%m-%d')}-双底形态分析结果-高速版.csv",
                             self.patlog, **sys_para["mailbox"])
 
-        elif self.patten_type_cmbo.GetStringSelection() == "RPS-Top10":
+        elif patten_type == "RPS-Top10":
 
             proc_dialog = ProgressDialog("开始分析", self.total_len+1)  # 根据股票数量设置进度条刻度长度
 
@@ -709,7 +671,10 @@ class DataFrame(wx.Frame):
 
                     try:
                         num, sym = code.lower().split(".")
-                        stock_dat = Csv_Backend.load_history_st_data(data_path + sym + num + '.csv', st_auth)
+
+                        stock_dat = Csv_Backend.load_history_st_data(data_path + sym + num + '.csv',
+                                                                     sdate_val, edate_val, st_auth)
+
                         if rps_para[u"输入跟踪排名的代码"] == code:
                             track_name = name
                             track_close = stock_dat["收盘价"][-rps_para["选取涨跌幅滚动周期"]:]
@@ -732,6 +697,7 @@ class DataFrame(wx.Frame):
                 Base_File_Oper.save_patten_analysis(df_return, f"{datetime.now().strftime('%y-%m-%d')}-RPS—Top10分析结果-高速版")
 
                 if (rps_para[u"输入跟踪排名的代码"].find('.') != -1) and track_name != "":  # 输入代码正常
+
                     self.patlog.re_print(f"\n开始跟踪个股{rps_para['输入跟踪排名的代码']}排名动态!")
                     df_track["close"] = track_close
 
